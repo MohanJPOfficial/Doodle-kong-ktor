@@ -1,10 +1,8 @@
 package com.mkdevelopers.data
 
-import com.mkdevelopers.data.models.Announcement
-import com.mkdevelopers.data.models.ChosenWord
-import com.mkdevelopers.data.models.GameState
-import com.mkdevelopers.data.models.PhaseChange
+import com.mkdevelopers.data.models.*
 import com.mkdevelopers.gson
+import com.mkdevelopers.util.getRandomWords
 import com.mkdevelopers.util.transformToUnderscores
 import com.mkdevelopers.util.words
 import io.ktor.websocket.*
@@ -21,6 +19,7 @@ class Room(
     private var winningPlayers = listOf<String>()
     private var word: String? = null
     private var curWords: List<String>? = null
+    private var drawingPlayerIndex = 0
 
     private var phaseChangedListener: ((Phase) -> Unit)? = null
 
@@ -158,8 +157,15 @@ class Room(
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun newRound() {
-
+        curWords = getRandomWords(3)
+        val newWords = NewWords(curWords ?: listOf())
+        nextDrawingPlayer()
+        GlobalScope.launch {
+            drawingPlayer?.socket?.send(Frame.Text(gson.toJson(newWords)))
+            timeAndNotify(DELAY_NEW_ROUND_TO_GAME_RUNNING)
+        }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -214,6 +220,24 @@ class Room(
             val phaseChange = PhaseChange(Phase.SHOW_WORD, DELAY_SHOW_WORD_TO_NEW_ROUND)
             broadcast(gson.toJson(phaseChange))
         }
+    }
+
+    private fun nextDrawingPlayer() {
+        drawingPlayer?.isDrawing = false
+        if(players.isEmpty()) {
+            return
+        }
+
+        drawingPlayer = if(drawingPlayerIndex <= players.size - 1){
+            players[drawingPlayerIndex]
+        } else {
+            players.last()
+        }
+
+        if(drawingPlayerIndex < players.size - 1)
+            drawingPlayerIndex++
+        else
+            drawingPlayerIndex = 0
     }
 
     //game phases
