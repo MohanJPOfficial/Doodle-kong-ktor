@@ -79,9 +79,18 @@ class Room(
             timestamp = System.currentTimeMillis(),
             announcementType = Announcement.TYPE_PLAYER_JOINED
         )
+        sendWordToPlayer(player)
+        broadcastPlayerStates()
         broadcast(gson.toJson(announcement))
 
         return player
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    fun removePlayer(clientId: String) {
+        GlobalScope.launch {
+            broadcastPlayerStates()
+        }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -171,6 +180,7 @@ class Room(
         val newWords = NewWords(curWords ?: listOf())
         nextDrawingPlayer()
         GlobalScope.launch {
+            broadcastPlayerStates()
             drawingPlayer?.socket?.send(Frame.Text(gson.toJson(newWords)))
             timeAndNotify(DELAY_NEW_ROUND_TO_GAME_RUNNING)
         }
@@ -217,6 +227,7 @@ class Room(
                     it.score -= PENALTY_NOBODY_GUESSED_IT
                 }
             }
+            broadcastPlayerStates()
             word?.let {
                 val chosenWord = ChosenWord(
                     chosenWord = it,
@@ -264,6 +275,7 @@ class Room(
             drawingPlayer?.let {
                 it.score += GUESS_SCORE_FOR_DRAWING_PLAYER / players.size
             }
+            broadcastPlayerStates()
 
             val announcement = Announcement(
                 message = "${message.from} has guessed it!",
@@ -284,6 +296,27 @@ class Room(
             return true
         }
         return false
+    }
+
+    /**
+     * Used for sorting players by score
+     * assigning rank to players
+     * broadcast to client
+     */
+    private suspend fun broadcastPlayerStates() {
+        val playersList = players.sortedByDescending { it.score }.map { player ->
+            PlayerData(
+                username = player.userName,
+                isDrawing = player.isDrawing,
+                score = player.score,
+                rank = player.rank
+            )
+        }
+
+        playersList.forEachIndexed { index, playerData ->
+            playerData.rank = index + 1
+        }
+        broadcast(gson.toJson(PlayersList(playersList)))
     }
 
     /**
