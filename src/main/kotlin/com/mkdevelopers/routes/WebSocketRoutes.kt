@@ -50,6 +50,10 @@ fun Route.gameWebSocketRoute() {
                         room.broadcastToAllExcept(message, clientId)
                     }
                 }
+                is ChosenWord -> {
+                    val room = server.rooms[payload.roomName] ?: return@standardWebSocket
+                    room.setWordAndSwitchToGameRunning(payload.chosenWord)
+                }
                 is ChatMessage -> {
 
                 }
@@ -93,6 +97,7 @@ fun Route.standardWebSocket(
                         Constants.TYPE_ANNOUNCEMENT -> Announcement::class.java
                         Constants.TYPE_JOIN_ROOM_HANDSHAKE -> JonRoomHandshake::class.java
                         Constants.TYPE_PHASE_CHANGE -> PhaseChange::class.java
+                        Constants.TYPE_CHOSEN_WORD -> ChosenWord::class.java
                         else -> BaseModel::class.java
                     }
                     val payload = gson.fromJson(message, type)

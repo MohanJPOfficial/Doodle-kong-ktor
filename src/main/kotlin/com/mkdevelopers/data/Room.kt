@@ -1,6 +1,7 @@
 package com.mkdevelopers.data
 
 import com.mkdevelopers.data.models.Announcement
+import com.mkdevelopers.data.models.ChosenWord
 import com.mkdevelopers.data.models.PhaseChange
 import com.mkdevelopers.gson
 import io.ktor.websocket.*
@@ -14,6 +15,8 @@ class Room(
 
     private var timerJob: Job? = null
     private var drawingPlayer: Player? = null
+    private var winningPlayers = listOf<String>()
+    private var word: String? = null
 
     private var phaseChangedListener: ((Phase) -> Unit)? = null
 
@@ -123,6 +126,11 @@ class Room(
         return players.find { it.userName == username } != null
     }
 
+    fun setWordAndSwitchToGameRunning(word: String) {
+        this.word = word
+        phase = Phase.GAME_RUNNING
+    }
+
     @OptIn(DelicateCoroutinesApi::class)
     private fun waitingForPlayers() {
         GlobalScope.launch {
@@ -154,8 +162,29 @@ class Room(
 
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun showWord() {
+        GlobalScope.launch {
 
+            /**
+             * If no winning players then 50 points will deduct from drawing player
+             */
+            if(winningPlayers.isEmpty()) {
+                drawingPlayer?.let {
+                    it.score -= PENALTY_NOBODY_GUESSED_IT
+                }
+            }
+            word?.let {
+                val chosenWord = ChosenWord(
+                    chosenWord = it,
+                    roomName = name
+                )
+                broadcast(gson.toJson(chosenWord))
+            }
+            timeAndNotify(DELAY_SHOW_WORD_TO_NEW_ROUND)
+            val phaseChange = PhaseChange(Phase.SHOW_WORD, DELAY_SHOW_WORD_TO_NEW_ROUND)
+            broadcast(gson.toJson(phaseChange))
+        }
     }
 
     //game phases
@@ -175,5 +204,7 @@ class Room(
         const val DELAY_NEW_ROUND_TO_GAME_RUNNING = 20000L
         const val DELAY_GAME_RUNNING_TO_SHOW_WORD = 60000L
         const val DELAY_SHOW_WORD_TO_NEW_ROUND = 10000L
+
+        const val PENALTY_NOBODY_GUESSED_IT = 50
     }
 }
