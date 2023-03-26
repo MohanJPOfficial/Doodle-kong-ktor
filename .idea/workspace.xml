@@ -4,7 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="fa013e24-9d6a-4617-801d-338a9582394d" name="Changes" comment="initial commit" />
+    <list default="true" id="fa013e24-9d6a-4617-801d-338a9582394d" name="Changes" comment="initial commit">
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/com/mkdevelopers/routes/WebSocketRoutes.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/com/mkdevelopers/routes/WebSocketRoutes.kt" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -45,7 +47,6 @@
     "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "last_opened_file_path": "/Users/mohanjp/Workout/ktor/ktor-doodlekong/src/main/kotlin/com/mkdevelopers/plugins",
     "project.structure.last.edited": "Global Libraries",
     "project.structure.proportion": "0.0",
