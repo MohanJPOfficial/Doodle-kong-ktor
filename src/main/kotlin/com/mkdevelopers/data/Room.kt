@@ -2,8 +2,11 @@ package com.mkdevelopers.data
 
 import com.mkdevelopers.data.models.Announcement
 import com.mkdevelopers.data.models.ChosenWord
+import com.mkdevelopers.data.models.GameState
 import com.mkdevelopers.data.models.PhaseChange
 import com.mkdevelopers.gson
+import com.mkdevelopers.util.transformToUnderscores
+import com.mkdevelopers.util.words
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 
@@ -17,6 +20,7 @@ class Room(
     private var drawingPlayer: Player? = null
     private var winningPlayers = listOf<String>()
     private var word: String? = null
+    private var curWords: List<String>? = null
 
     private var phaseChangedListener: ((Phase) -> Unit)? = null
 
@@ -158,8 +162,33 @@ class Room(
 
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun gameRunning() {
+        winningPlayers = listOf()
+        val wordToSend = word ?: curWords?.random() ?: words.random()
+        val wordWithUnderscores = wordToSend.transformToUnderscores()
+        val drawingUsername = (drawingPlayer ?: players.random()).userName
 
+        val gameStateForDrawingPlayer = GameState(
+            drawingPlayer = drawingUsername,
+            word = wordToSend
+        )
+        val gameStateForGuessingPlayers = GameState(
+            drawingPlayer = drawingUsername,
+            word = wordWithUnderscores
+        )
+
+        GlobalScope.launch {
+            broadcastToAllExcept(
+                message = gson.toJson(gameStateForGuessingPlayers),
+                clientId = drawingPlayer?.clientId ?: players.random().clientId
+            )
+            drawingPlayer?.socket?.send(Frame.Text(gson.toJson(gameStateForDrawingPlayer)))
+
+            timeAndNotify(DELAY_GAME_RUNNING_TO_SHOW_WORD)
+
+            println("Drawing phase in room $name started. It'll last ${DELAY_GAME_RUNNING_TO_SHOW_WORD / 1000}s")
+        }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
