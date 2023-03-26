@@ -286,6 +286,40 @@ class Room(
         return false
     }
 
+    /**
+     * This function called whenever player joins room or
+     * player reconnects to room
+     */
+    private suspend fun sendWordToPlayer(player: Player) {
+         val delay = when(phase) {
+             Phase.WAITING_FOR_START -> DELAY_WAITING_FOR_START_TO_NEW_ROUND
+             Phase.NEW_ROUND -> DELAY_NEW_ROUND_TO_GAME_RUNNING
+             Phase.GAME_RUNNING -> DELAY_GAME_RUNNING_TO_SHOW_WORD
+             Phase.SHOW_WORD -> DELAY_SHOW_WORD_TO_NEW_ROUND
+             else -> 0L
+         }
+        val phaseChange = PhaseChange(
+            phase = phase,
+            time = delay,
+            drawingPlayer = drawingPlayer?.userName
+        )
+
+        word?.let { curWord ->
+            drawingPlayer?.let { drawingPlayer ->
+                val gameState = GameState(
+                    drawingPlayer = drawingPlayer.userName,
+                    word = if(player.isDrawing || phase == Phase.SHOW_WORD) {
+                        curWord
+                    } else {
+                        curWord.transformToUnderscores()
+                    }
+                )
+                player.socket.send(Frame.Text(gson.toJson(gameState)))
+            }
+        }
+        player.socket.send(Frame.Text(gson.toJson(phaseChange)))
+    }
+
     //choosing next draw player by next index to the drawing player
     private fun nextDrawingPlayer() {
         drawingPlayer?.isDrawing = false
