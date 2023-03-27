@@ -61,13 +61,46 @@ class Room(
         }
     }
 
+    /**
+     * adding a new player or
+     * keeping left players alive at specific index if rejoins
+     */
     suspend fun addPlayer(clientId: String, username: String, socketSession: WebSocketSession): Player {
-        val player = Player(
-            userName = username,
-            socket = socketSession,
-            clientId = clientId
-        )
-        players += player
+        var indexToAdd = players.size - 1
+        val player = if(leftPlayers.containsKey(clientId)) {
+            val leftPlayer = leftPlayers[clientId]
+            leftPlayer?.first?.let { player ->
+                player.socket = socketSession
+                player.isDrawing = drawingPlayer?.clientId == clientId
+                indexToAdd = leftPlayer.second
+
+                playerRemoveJobs[clientId]?.cancel()
+                playerRemoveJobs.remove(clientId)
+                leftPlayers.remove(clientId)
+                player
+
+            } ?: Player(
+                userName = username,
+                socket = socketSession,
+                clientId = clientId
+            )
+        } else {
+            Player(
+                userName = username,
+                socket = socketSession,
+                clientId = clientId
+            )
+        }
+
+        indexToAdd = when {
+            players.isEmpty() -> 0
+            indexToAdd >= players.size -> players.size - 1
+            else -> indexToAdd
+        }
+
+        val tmpPlayers = players.toMutableList()
+        tmpPlayers.add(indexToAdd, player)
+        players = tmpPlayers.toList()
 
         if(players.size == 1) {
             phase = Phase.WAITING_FOR_PLAYERS
