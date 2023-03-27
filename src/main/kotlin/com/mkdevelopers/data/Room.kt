@@ -29,6 +29,7 @@ class Room(
     private val leftPlayers = ConcurrentHashMap<String, Pair<Player, Int>>()
 
     private var curRoundDrawData = listOf<String>()
+    var lastDrawData: DrawData? = null
 
     private var phaseChangedListener: ((Phase) -> Unit)? = null
 
@@ -69,8 +70,28 @@ class Room(
         }
     }
 
+    /**
+     * storing the serialization of draw data
+     */
     fun addSerializedDrawInfo(drawAction: String) {
         curRoundDrawData += drawAction
+    }
+
+    /**
+     * finish off drawing
+     * whenever user drawing but time out it will trigger
+     *
+     * on touch events android side
+     * 1 - ACTION_UP
+     * 2 - ACTION_MOVE
+     */
+    private suspend fun finishOffDrawing() {
+        lastDrawData?.let {
+            if(curRoundDrawData.isNotEmpty() && it.motionEvent == 2) { // 2 represents action move in on touch listener android
+                val finishDrawData = it.copy(motionEvent = 1) // 1 represents action up in on touch listener android
+                broadcast(gson.toJson(finishDrawData))
+            }
+        }
     }
 
     /**
@@ -177,6 +198,9 @@ class Room(
         }
     }
 
+    /**
+     * send time and phase change to client
+     */
     @OptIn(DelicateCoroutinesApi::class)
     private fun timeAndNotify(ms: Long) {
         timerJob?.cancel()
@@ -197,8 +221,14 @@ class Room(
             }
             phase = when(phase) {
                 Phase.WAITING_FOR_START -> Phase.NEW_ROUND
-                Phase.NEW_ROUND -> Phase.GAME_RUNNING
-                Phase.GAME_RUNNING -> Phase.SHOW_WORD
+                Phase.NEW_ROUND -> {
+                    word = null
+                    Phase.GAME_RUNNING
+                }
+                Phase.GAME_RUNNING -> {
+                    finishOffDrawing()
+                    Phase.SHOW_WORD
+                }
                 Phase.SHOW_WORD -> Phase.NEW_ROUND
                 else -> Phase.WAITING_FOR_PLAYERS
             }
@@ -210,6 +240,9 @@ class Room(
                 guess.from != drawingPlayer?.userName && phase == Phase.GAME_RUNNING
     }
 
+    /**
+     * broadcast data to clients
+     */
     suspend fun broadcast(message: String) {
         players.forEach { player ->
             if(player.socket.isActive) {
@@ -218,6 +251,9 @@ class Room(
         }
     }
 
+    /**
+     * broadcast data to clients except draw player
+     */
     suspend fun broadcastToAllExcept(message: String, clientId: String) {
         players.forEach { player ->
             if(player.clientId != clientId && player.socket.isActive) {
@@ -235,6 +271,9 @@ class Room(
         phase = Phase.GAME_RUNNING
     }
 
+    /**
+     * changing phase to waiting for players and send to client
+     */
     @OptIn(DelicateCoroutinesApi::class)
     private fun waitingForPlayers() {
         GlobalScope.launch {
@@ -246,6 +285,9 @@ class Room(
         }
     }
 
+    /**
+     * changing phase to waiting for start and send to client
+     */
     @OptIn(DelicateCoroutinesApi::class)
     private fun waitingForStart() {
         GlobalScope.launch {
@@ -258,6 +300,9 @@ class Room(
         }
     }
 
+    /**
+     * changing phase to new and send to client also broadcast player states
+     */
     @OptIn(DelicateCoroutinesApi::class)
     private fun newRound() {
         curRoundDrawData = listOf()
@@ -271,6 +316,9 @@ class Room(
         }
     }
 
+    /**
+     * game running phase send guessing word to client for both drawing player and guessing players
+     */
     @OptIn(DelicateCoroutinesApi::class)
     private fun gameRunning() {
         winningPlayers = listOf()
