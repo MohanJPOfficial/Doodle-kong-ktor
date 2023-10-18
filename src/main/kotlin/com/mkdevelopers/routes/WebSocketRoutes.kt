@@ -18,7 +18,7 @@ fun Route.gameWebSocketRoute() {
     route("/ws/draw") {
         standardWebSocket { socket, clientId, message, payload ->
             when(payload) {
-                is JonRoomHandshake -> {
+                is JoinRoomHandshake -> {
                     val room = server.rooms[payload.roomName]
                     if(room == null) {
                         val gameError = GameError(GameError.ERROR_ROOM_NOT_FOUND)
@@ -117,7 +117,7 @@ fun Route.standardWebSocket(
                         Constants.TYPE_CHAT_MESSAGE -> ChatMessage::class.java
                         Constants.TYPE_DRAW_DATA -> DrawData::class.java
                         Constants.TYPE_ANNOUNCEMENT -> Announcement::class.java
-                        Constants.TYPE_JOIN_ROOM_HANDSHAKE -> JonRoomHandshake::class.java
+                        Constants.TYPE_JOIN_ROOM_HANDSHAKE -> JoinRoomHandshake::class.java
                         Constants.TYPE_PHASE_CHANGE -> PhaseChange::class.java
                         Constants.TYPE_CHOSEN_WORD -> ChosenWord::class.java
                         Constants.TYPE_GAME_STATE -> GameState::class.java

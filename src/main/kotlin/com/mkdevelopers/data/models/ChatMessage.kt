@@ -6,5 +6,5 @@ data class ChatMessage(
     val from: String,
     val roomName: String,
     val message: String,
-    val timeStamp: Long
+    val timestamp: Long
 ) : BaseModel(Constants.TYPE_CHAT_MESSAGE)
