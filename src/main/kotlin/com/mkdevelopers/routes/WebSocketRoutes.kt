@@ -27,7 +27,7 @@ fun Route.gameWebSocketRoute() {
                     }
 
                     val player = Player(
-                        userName = payload.userName,
+                        userName = payload.username,
                         socket = socket,
                         clientId = payload.clientId
                     )
