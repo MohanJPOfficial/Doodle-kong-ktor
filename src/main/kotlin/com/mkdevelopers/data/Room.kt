@@ -323,6 +323,7 @@ class Room(
     private fun gameRunning() {
         winningPlayers = listOf()
         val wordToSend = word ?: curWords?.random() ?: words.random()
+        word = wordToSend
         val wordWithUnderscores = wordToSend.transformToUnderscores()
         val drawingUsername = (drawingPlayer ?: players.random()).userName
 
@@ -493,7 +494,7 @@ class Room(
             return
         }
 
-        drawingPlayer = if(drawingPlayerIndex <= players.size - 1){
+        drawingPlayer = if(drawingPlayerIndex <= players.size - 1) {
             players[drawingPlayerIndex]
         } else {
             players.last()
@@ -503,6 +504,8 @@ class Room(
             drawingPlayerIndex++
         else
             drawingPlayerIndex = 0
+
+        drawingPlayer?.isDrawing = true
     }
 
     /**
